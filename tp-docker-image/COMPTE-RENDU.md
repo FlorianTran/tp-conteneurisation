@@ -1,5 +1,18 @@
 # Compte-rendu TP Docker - Optimisation d'image
 
+## Commandes executees
+
+npm install
+npm run start
+docker build -f Dockerfile.classic -t tp-docker:classic .
+docker run --rm -p 3000:3000 tp-docker:classic
+docker image ls tp-docker:classic
+docker build -f Dockerfile.multistage -t tp-docker:multistage .
+docker run --rm -p 3000:3000 tp-docker:multistage
+docker images | grep tp-docker
+docker history tp-docker:classic
+docker history tp-docker:multistage
+
 ## Poids des images
 
 tp-docker:classic = 1.61 GB
@@ -40,4 +53,4 @@ Docker invalide le cache d'un layer des qu'un fichier copie change. En copiant p
 
 ## Amelioration possible en production
 
-Utiliser node:20-alpine au lieu de node:20-slim pour reduire encore la taille (~50 MB de base au lieu de ~220 MB). Attention aux incompatibilites potentielles avec les modules natifs (musl vs glibc).
+Utiliser node:20-alpine au lieu de node:20-slim pour reduire encore la taille (~50 MB de base au lieu de ~220 MB).

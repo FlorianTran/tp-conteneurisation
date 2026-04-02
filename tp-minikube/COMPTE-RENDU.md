@@ -1,5 +1,29 @@
 # Compte-rendu TP Minikube
 
+## Commandes executees
+
+kubectl version --client
+minikube version
+docker version
+minikube start --driver=docker
+kubectl config current-context
+kubectl cluster-info
+kubectl get nodes
+kubectl create namespace tp-minikube
+kubectl apply -f deployment.yaml -n tp-minikube
+kubectl get deployments -n tp-minikube
+kubectl get pods -n tp-minikube
+kubectl describe pod -n tp-minikube -l app=web-nginx
+kubectl apply -f service.yaml -n tp-minikube
+kubectl get svc -n tp-minikube
+minikube service web-nginx-svc -n tp-minikube --url
+kubectl logs -n tp-minikube -l app=web-nginx
+kubectl set image -n tp-minikube deployment/web-nginx nginx=nginx:1.26
+kubectl rollout status -n tp-minikube deployment/web-nginx
+kubectl get pods -n tp-minikube
+kubectl delete namespace tp-minikube
+minikube stop
+
 ## Verifications de base
 
 kubectl config current-context = minikube

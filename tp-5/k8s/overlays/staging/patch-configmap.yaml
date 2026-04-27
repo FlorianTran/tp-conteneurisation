@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: demo-app-config
+data:
+  ENV_NAME: "staging"
+  LOG_LEVEL: "info"
+  index.html: |
+    <!DOCTYPE html>
+    <html>
+    <head><title>Demo App</title></head>
+    <body>
+      <h1>Demo App</h1>
+      <p>ENV: staging</p>
+      <p>LOG: info</p>
+    </body>
+    </html>

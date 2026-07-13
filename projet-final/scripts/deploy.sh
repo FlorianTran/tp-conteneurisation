@@ -47,8 +47,8 @@ echo ">> Postgres (StatefulSet + service headless)"
 kubectl apply -f "${K8S}/postgres-service.yaml"
 kubectl apply -f "${K8S}/postgres-statefulset.yaml"
 
-echo ">> attente Postgres pret"
-kubectl rollout status statefulset/postgres -n "${NS}" --timeout=180s
+echo ">> attente Postgres pret (le 1er pull de l'image postgres peut etre long)"
+kubectl rollout status statefulset/postgres -n "${NS}" --timeout=600s
 
 echo ">> ConfigMaps applicatifs"
 kubectl apply -f "${K8S}/catalogue-configmap.yaml"

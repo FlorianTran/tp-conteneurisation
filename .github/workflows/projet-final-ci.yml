@@ -14,7 +14,9 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/projet-final
+  # GHCR exige un nom de repo en minuscules (github.repository_owner = "FlorianTran").
+  # On fige le prefixe en minuscules, coherent avec les manifests k8s.
+  IMAGE_PREFIX: ghcr.io/floriantran/projet-final
 
 jobs:
   lint-test:

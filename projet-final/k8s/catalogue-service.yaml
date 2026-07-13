@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: catalogue-svc
+  namespace: boutique
+  labels:
+    app: catalogue
+spec:
+  type: ClusterIP
+  selector:
+    app: catalogue
+  ports:
+    - name: http
+      port: 80
+      targetPort: 3000

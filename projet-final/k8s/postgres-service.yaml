@@ -1,0 +1,18 @@
+# Service headless (clusterIP: None) : requis par le StatefulSet pour donner
+# une identite DNS stable au pod (postgres-0.postgres.boutique.svc.cluster.local).
+# Les apps se connectent via le nom court "postgres".
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: boutique
+  labels:
+    app: postgres
+spec:
+  clusterIP: None
+  selector:
+    app: postgres
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432

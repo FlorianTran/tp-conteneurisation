@@ -1,0 +1,174 @@
+# Strategie zero-trust : tout bloquer par defaut (default-deny), puis n'ouvrir
+# que les flux strictement necessaires. Requiert un CNI qui implemente les
+# NetworkPolicies (Calico) - sinon les regles sont inertes (cf. TP-5).
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: boutique
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+---
+# DNS sortant autorise pour tous les pods (resolution des noms de service).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns-egress
+  namespace: boutique
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    - ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+---
+# Entrees depuis l'ingress-nginx vers frontend / catalogue / orders.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-ingress-nginx
+  namespace: boutique
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app
+        operator: In
+        values: [frontend, catalogue, orders]
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - port: 8080
+          protocol: TCP
+        - port: 3000
+          protocol: TCP
+---
+# orders -> catalogue (validation produit sur POST /orders).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-orders-to-catalogue
+  namespace: boutique
+spec:
+  podSelector:
+    matchLabels:
+      app: catalogue
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: orders
+      ports:
+        - port: 3000
+          protocol: TCP
+---
+# Sorties applicatives : orders/catalogue -> catalogue(3000) + postgres(5432).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-apps-egress
+  namespace: boutique
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app
+        operator: In
+        values: [catalogue, orders]
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app: postgres
+      ports:
+        - port: 5432
+          protocol: TCP
+    - to:
+        - podSelector:
+            matchLabels:
+              app: catalogue
+      ports:
+        - port: 3000
+          protocol: TCP
+---
+# Postgres accepte les connexions des apps et du job de backup.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-postgres-ingress
+  namespace: boutique
+spec:
+  podSelector:
+    matchLabels:
+      app: postgres
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchExpressions:
+              - key: app
+                operator: In
+                values: [catalogue, orders, postgres-backup]
+      ports:
+        - port: 5432
+          protocol: TCP
+---
+# Le job de backup peut joindre postgres.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-backup-egress
+  namespace: boutique
+spec:
+  podSelector:
+    matchLabels:
+      app: postgres-backup
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app: postgres
+      ports:
+        - port: 5432
+          protocol: TCP
+---
+# Prometheus (namespace monitoring) scrape /metrics des APIs sur le port 3000.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-metrics-scrape
+  namespace: boutique
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app
+        operator: In
+        values: [catalogue, orders]
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+      ports:
+        - port: 3000
+          protocol: TCP

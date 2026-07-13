@@ -3,3 +3,7 @@ npm-debug.log
 tp-5/*.key
 tp-5/*.crt
 tp-5/*.csr
+
+# projet-final : vrais secrets hors Git (on garde les *.example.yaml)
+projet-final/k8s/*-secret.yaml
+!projet-final/k8s/*-secret.example.yaml

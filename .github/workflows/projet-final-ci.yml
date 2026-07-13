@@ -1,0 +1,97 @@
+name: projet-final CI
+
+# Ne se declenche que sur les changements du projet final.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "projet-final/**"
+      - ".github/workflows/projet-final-ci.yml"
+  pull_request:
+    paths:
+      - "projet-final/**"
+      - ".github/workflows/projet-final-ci.yml"
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/projet-final
+
+jobs:
+  lint-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [catalogue, orders]
+    defaults:
+      run:
+        working-directory: projet-final/services/${{ matrix.service }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install
+        run: npm install --no-audit --no-fund
+      - name: Syntax check
+        run: node --check server.js
+      - name: Test
+        run: npm test
+
+  build-scan-push:
+    needs: lint-test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [catalogue, orders, frontend]
+    permissions:
+      contents: read
+      packages: write # push GHCR via GITHUB_TOKEN
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: |
+          docker build \
+            -t ${IMAGE_PREFIX}-${{ matrix.service }}:${GITHUB_SHA::7} \
+            -t ${IMAGE_PREFIX}-${{ matrix.service }}:latest \
+            projet-final/services/${{ matrix.service }}
+
+      - name: Scan Trivy (image)
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          image-ref: ${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:${{ github.sha }}
+          format: table
+          exit-code: "0" # rapport uniquement (ne casse pas le build sur CVE)
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+
+      # Push uniquement sur main (pas sur les PR).
+      - name: Login GHCR
+        if: github.ref == 'refs/heads/main'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push GHCR
+        if: github.ref == 'refs/heads/main'
+        run: |
+          docker push ${IMAGE_PREFIX}-${{ matrix.service }}:${GITHUB_SHA::7}
+          docker push ${IMAGE_PREFIX}-${{ matrix.service }}:latest
+
+  # ---------------------------------------------------------------------------
+  # Job deploy : VOLONTAIREMENT DESACTIVE.
+  # Un runner GitHub heberge ne peut pas joindre un cluster minikube local.
+  # Le deploiement se fait via scripts/deploy.sh en local (ou un runner
+  # self-hosted dans le reseau du cluster en conditions reelles).
+  # Voir README section "Limites" et COMPTE-RENDU.
+  # ---------------------------------------------------------------------------
+  deploy:
+    if: false
+    needs: build-scan-push
+    runs-on: self-hosted # necessiterait un runner ayant acces au cluster
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy
+        run: ./projet-final/scripts/deploy.sh

@@ -1,0 +1,40 @@
+# Ingress path-routing :
+#   /                       -> frontend-svc (page statique)
+#   /api/catalogue/(.*)     -> catalogue-svc, reecrit en /(.*)   ex: /api/catalogue/products -> /products
+#   /api/orders/(.*)        -> orders-svc,    reecrit en /(.*)   ex: /api/orders/orders     -> /orders
+# La reecriture (rewrite-target + use-regex) evite d'exposer le prefixe /api/... aux APIs.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: boutique-ingress
+  namespace: boutique
+  annotations:
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: projet-final.local
+      http:
+        paths:
+          - path: /api/catalogue(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: catalogue-svc
+                port:
+                  number: 80
+          - path: /api/orders(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: orders-svc
+                port:
+                  number: 80
+          - path: /()(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: frontend-svc
+                port:
+                  number: 80

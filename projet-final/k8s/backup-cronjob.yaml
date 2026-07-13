@@ -1,0 +1,63 @@
+# Bonus Runbook : sauvegarde quotidienne de la base via pg_dump -> PVC dedie.
+# Le PVC conserve les dumps independamment du cycle de vie des pods.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-backup-pvc
+  namespace: boutique
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: postgres-backup
+  namespace: boutique
+spec:
+  schedule: "0 2 * * *" # tous les jours a 02:00
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app: postgres-backup
+        spec:
+          serviceAccountName: postgres-sa
+          automountServiceAccountToken: false
+          restartPolicy: OnFailure
+          containers:
+            - name: pg-dump
+              image: postgres:16-alpine
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -e
+                  TS=$(date +%Y%m%d-%H%M%S)
+                  echo "backup demarre a $TS"
+                  pg_dump -h postgres -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
+                    > "/backups/boutique-$TS.sql"
+                  echo "backup ecrit : /backups/boutique-$TS.sql"
+                  ls -lh /backups
+              env:
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: postgres-secret
+                      key: POSTGRES_PASSWORD
+              envFrom:
+                - secretRef:
+                    name: postgres-secret
+              volumeMounts:
+                - name: backups
+                  mountPath: /backups
+          volumes:
+            - name: backups
+              persistentVolumeClaim:
+                claimName: postgres-backup-pvc

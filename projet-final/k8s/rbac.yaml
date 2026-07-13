@@ -1,0 +1,56 @@
+# ServiceAccount dedie par workload + Role demonstratif.
+# Chaque app tourne avec son propre SA, automountServiceAccountToken: false
+# (les apps n'appellent pas l'API Kubernetes -> aucun token monte).
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: catalogue-sa
+  namespace: boutique
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: orders-sa
+  namespace: boutique
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: frontend-sa
+  namespace: boutique
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: postgres-sa
+  namespace: boutique
+automountServiceAccountToken: false
+---
+# Role demonstratif : donne au SA orders le droit de LISTER les pods du namespace
+# (lecture seule). Sert a montrer le principe RBAC + least privilege.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: pod-reader
+  namespace: boutique
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: orders-pod-reader
+  namespace: boutique
+subjects:
+  - kind: ServiceAccount
+    name: orders-sa
+    namespace: boutique
+roleRef:
+  kind: Role
+  name: pod-reader
+  apiGroup: rbac.authorization.k8s.io

@@ -1,0 +1,51 @@
+# Values light pour kube-prometheus-stack sur un laptop (minikube).
+# On reduit la retention et les resources pour tenir dans 6 Go.
+
+grafana:
+  adminPassword: admin # demo locale uniquement
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+  # Provisionne l'acces au datasource Prometheus par defaut (deja fait par le chart).
+
+prometheus:
+  prometheusSpec:
+    retention: 2h
+    # On laisse serviceMonitorSelector par defaut : il selectionne les
+    # ServiceMonitor portant le label "release: monitoring".
+    serviceMonitorSelectorNilUsesHelmValues: true
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+alertmanager:
+  alertmanagerSpec:
+    resources:
+      requests:
+        cpu: 25m
+        memory: 64Mi
+      limits:
+        cpu: 100m
+        memory: 128Mi
+
+# Composants lourds/inutiles en local : on allege.
+kubeStateMetrics:
+  enabled: true
+nodeExporter:
+  enabled: true
+prometheusOperator:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi

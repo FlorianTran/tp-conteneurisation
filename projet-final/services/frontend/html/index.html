@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Projet Final - Boutique</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        max-width: 760px;
+        margin: 2rem auto;
+        padding: 0 1rem;
+        color: #1a1a1a;
+      }
+      h1 {
+        border-bottom: 2px solid #333;
+        padding-bottom: 0.3rem;
+      }
+      section {
+        margin-top: 1.5rem;
+      }
+      ul {
+        list-style: none;
+        padding: 0;
+      }
+      li {
+        padding: 0.4rem 0.6rem;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        margin-bottom: 0.3rem;
+      }
+      .err {
+        color: #b00;
+      }
+      button {
+        padding: 0.4rem 0.8rem;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Boutique - Projet Final K8s</h1>
+    <p>Frontend nginx qui appelle les APIs catalogue et orders via l'Ingress (same-origin, pas de CORS).</p>
+
+    <section>
+      <h2>Produits (service catalogue)</h2>
+      <ul id="products">
+        <li>Chargement...</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>Commandes (service orders)</h2>
+      <button id="order-btn">Commander le produit 1</button>
+      <ul id="orders">
+        <li>Chargement...</li>
+      </ul>
+    </section>
+
+    <script>
+      async function loadProducts() {
+        const ul = document.getElementById('products');
+        try {
+          const res = await fetch('/api/catalogue/products');
+          const data = await res.json();
+          ul.innerHTML = data.products
+            .map((p) => `<li>#${p.id} - ${p.name} - ${p.price} EUR</li>`)
+            .join('');
+        } catch (e) {
+          ul.innerHTML = '<li class="err">Erreur catalogue: ' + e.message + '</li>';
+        }
+      }
+
+      async function loadOrders() {
+        const ul = document.getElementById('orders');
+        try {
+          const res = await fetch('/api/orders/orders');
+          const data = await res.json();
+          ul.innerHTML = data.orders.length
+            ? data.orders
+                .map((o) => `<li>Commande #${o.id} - produit ${o.product_id} x${o.quantity}</li>`)
+                .join('')
+            : '<li>Aucune commande</li>';
+        } catch (e) {
+          ul.innerHTML = '<li class="err">Erreur orders: ' + e.message + '</li>';
+        }
+      }
+
+      document.getElementById('order-btn').addEventListener('click', async () => {
+        await fetch('/api/orders/orders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ product_id: 1, quantity: 1 }),
+        });
+        loadOrders();
+      });
+
+      loadProducts();
+      loadOrders();
+    </script>
+  </body>
+</html>

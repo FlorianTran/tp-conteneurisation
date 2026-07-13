@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: orders-config
+  namespace: boutique
+data:
+  DB_HOST: postgres
+  DB_PORT: "5432"
+  LOG_LEVEL: info
+  PORT: "3000"
+  # URL DNS interne du service catalogue (validation produit sur POST /orders).
+  CATALOGUE_URL: http://catalogue-svc

@@ -1,0 +1,24 @@
+# ServiceMonitor : dit a Prometheus (installe par kube-prometheus-stack) de
+# scraper /metrics sur les services catalogue et orders.
+# Le label "release: monitoring" est necessaire pour que le Prometheus de la
+# stack selectionne ce ServiceMonitor (serviceMonitorSelector par defaut).
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: boutique-apis
+  namespace: boutique
+  labels:
+    release: monitoring
+spec:
+  namespaceSelector:
+    matchNames:
+      - boutique
+  selector:
+    matchExpressions:
+      - key: app
+        operator: In
+        values: [catalogue, orders]
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s

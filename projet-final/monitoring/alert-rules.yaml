@@ -1,0 +1,39 @@
+# PrometheusRule : regles d'alerte chargees par le Prometheus de la stack.
+# Le label "release: monitoring" permet la selection par le ruleSelector par defaut.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: boutique-alerts
+  namespace: boutique
+  labels:
+    release: monitoring
+spec:
+  groups:
+    - name: boutique.rules
+      rules:
+        # Un service API n'a plus aucun pod disponible (panne / crash / scale 0).
+        # On s'appuie sur kube-state-metrics plutot que sur `up == 0` : quand un
+        # Deployment tombe a 0 pod, le Service perd ses endpoints et la serie `up`
+        # DISPARAIT (au lieu de valoir 0) -> `up == 0` ne se declencherait jamais.
+        # kube_deployment_status_replicas_available reste, lui, expose a 0.
+        - alert: ApiDeploymentDown
+          expr: kube_deployment_status_replicas_available{namespace="boutique", deployment=~"catalogue|orders"} == 0
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Deploiement {{ $labels.deployment }} sans pod disponible"
+            description: "Le deploiement {{ $labels.deployment }} n'a plus aucun pod disponible depuis 1 minute."
+        # Taux de 5xx eleve sur les APIs.
+        - alert: HighErrorRate
+          expr: |
+            sum(rate(http_requests_total{status=~"5.."}[5m])) by (service)
+              /
+            sum(rate(http_requests_total[5m])) by (service)
+              > 0.1
+          for: 2m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Taux de 5xx eleve sur {{ $labels.service }}"
+            description: "Plus de 10% de reponses 5xx sur {{ $labels.service }} depuis 2 minutes."

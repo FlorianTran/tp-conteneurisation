@@ -57,9 +57,9 @@ jobs:
             projet-final/services/${{ matrix.service }}
 
       - name: Scan Trivy (image)
-        uses: aquasecurity/trivy-action@0.24.0
+        uses: aquasecurity/trivy-action@0.35.0
         with:
-          image-ref: ${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:${{ github.sha }}
+          image-ref: ${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:latest
           format: table
           exit-code: "0" # rapport uniquement (ne casse pas le build sur CVE)
           severity: HIGH,CRITICAL
